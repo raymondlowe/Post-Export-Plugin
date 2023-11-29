@@ -28,6 +28,12 @@ function post_export_page() {
                 }
                 ?>
             </select>
+            <p>Select export format:</p>
+<div>
+    <label><input type="radio" name="export_format" value="json" checked> JSON</label>
+    <label><input type="radio" name="export_format" value="markdown"> Markdown</label>
+    <label><input type="radio" name="export_format" value="html"> HTML</label>
+</div>
             <input type="hidden" name="action" value="export_posts">
             <?php wp_nonce_field( 'export_posts_nonce', 'export_posts_nonce_field' ); ?>
             <p><input type="submit" value="Export Posts"></p>
@@ -42,6 +48,7 @@ function post_export_handle_form() {
 
     // Get the selected category ID
     $category_id = $_POST['post_category'];
+        $export_format = $_POST['export_format']; // Get export format from POST
 
     // Set up the post query
     $args = array(
@@ -86,16 +93,42 @@ function post_export_handle_form() {
         );
         $export_data[] = $export_item;
     }
+
+
+        if ($export_format === 'json') {
     $export_file = 'posts-export-' . date( 'Y-m-d-H-i-s' ) . '.json';
     $export_file_path = WP_CONTENT_DIR . '/' . $export_file;
     file_put_contents( $export_file_path, json_encode( $export_data ) );
-
+    } else if ($export_format === 'markdown') {
+        $export_file = 'posts-export-' . date( 'Y-m-d-H-i-s' ) . '.md';
+        $export_file_path = WP_CONTENT_DIR . '/' . $export_file;
+        $markdown_data = convert_posts_to_markdown($export_data); // Converts items to Markdown format
+        file_put_contents( $export_file_path, $markdown_data );
+        header( 'Content-Type: text/markdown' );
+    } else {
+        wp_die('Invalid export format.');
+    }
     // Download the export file
     header( 'Content-Type: application/json' );
+
+
+
+    
     header( 'Content-Disposition: attachment; filename="' . $export_file . '"' );
     readfile( $export_file_path );
 }
 
+function convert_posts_to_markdown($posts) {
+    // Implement conversion logic here.
+    // For example, concatenate post titles, contents, links, etc., with Markdown syntax
+    $markdown_output = '';
+    foreach ($posts as $post) {
+        $markdown_output .= "# " . $post['title'] . "\n\n";
+        // Add more Markdown formatting as required...
+        $markdown_output .= $post['text'] . "\n\n";
+    }
+    return $markdown_output;
+}
 // Add the custom filter to convert HTML to Markdown
 function convert_to_markdown($content) {
     // Remove all HTML tags except H1, H2, H3, H4, H5, H6, UL, LI
